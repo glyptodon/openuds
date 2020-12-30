@@ -32,7 +32,7 @@ import org.apache.guacamole.net.auth.AbstractAuthenticatedUser;
 import org.apache.guacamole.net.auth.AuthenticatedUser;
 import org.apache.guacamole.net.auth.AuthenticationProvider;
 import org.apache.guacamole.net.auth.Credentials;
-import org.apache.guacamole.protocol.GuacamoleConfiguration;
+import org.openuds.guacamole.connection.ConnectionService;
 
 /**
  * A Guacamole user that was authenticated by an external UDS service.
@@ -50,10 +50,11 @@ public class UDSAuthenticatedUser extends AbstractAuthenticatedUser {
     private final Credentials credentials;
 
     /**
-     * The GuacamoleConfiguration generated from the connection information
-     * returned by the external UDS service when the user authenticated.
+     * The UDS-specific data that should be provided to the remote UDS service
+     * to re-authenticate this user and determine the details of the connection
+     * they are authorized to access.
      */
-    private final GuacamoleConfiguration config;
+    private final String data;
 
     /**
      * Creates a new UDSAuthenticatedUser representing a Guacamole user that
@@ -65,15 +66,16 @@ public class UDSAuthenticatedUser extends AbstractAuthenticatedUser {
      * @param credentials
      *     The credentials provided by the user when they authenticated.
      *
-     * @param config
-     *     The GuacamoleConfiguration generated from the connection information
-     *     returned by the external UDS service when the user authenticated.
+     * @param data
+     *     The UDS-specific data that should be provided to the remote UDS
+     *     service to re-authenticate this user and determine the details of
+     *     the connection they are authorized to access.
      */
     public UDSAuthenticatedUser(AuthenticationProvider authProvider,
-            Credentials credentials, GuacamoleConfiguration config) {
+            Credentials credentials, String data) {
         this.authProvider = authProvider;
         this.credentials = credentials;
-        this.config = config;
+        this.data = data;
     }
 
     @Override
@@ -92,16 +94,17 @@ public class UDSAuthenticatedUser extends AbstractAuthenticatedUser {
     }
 
     /**
-     * Returns the GuacamoleConfiguration generated from the connection
-     * information provided by the external UDS service when the user
-     * authenticated.
+     * Returns the UDS-specific data that authenticates this user and
+     * determines the details of the connection they are authorized to access.
+     *
+     * @see ConnectionService#getConnectionConfiguration(java.lang.String)
      *
      * @return
-     *     The GuacamoleConfiguration generated from the connection information
-     *     provided by the external UDS service when the user authenticated.
+     *     The UDS-specific data that authenticates this user and determines
+     *     the details of the connection they are authorized to access.
      */
-    public GuacamoleConfiguration getGuacamoleConfiguration() {
-        return config;
+    public String getData() {
+        return data;
     }
 
 }

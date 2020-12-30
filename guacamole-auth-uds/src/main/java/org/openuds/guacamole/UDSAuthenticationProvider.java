@@ -33,7 +33,6 @@ import com.google.inject.Injector;
 import java.util.Collections;
 import javax.servlet.http.HttpServletRequest;
 import org.apache.guacamole.GuacamoleException;
-import org.apache.guacamole.GuacamoleServerException;
 import org.apache.guacamole.form.Field;
 import org.apache.guacamole.net.auth.AbstractAuthenticationProvider;
 import org.apache.guacamole.net.auth.AuthenticatedUser;
@@ -41,11 +40,8 @@ import org.apache.guacamole.net.auth.Credentials;
 import org.apache.guacamole.net.auth.UserContext;
 import org.apache.guacamole.net.auth.credentials.CredentialsInfo;
 import org.apache.guacamole.net.auth.credentials.GuacamoleInvalidCredentialsException;
-import org.apache.guacamole.net.auth.simple.SimpleUserContext;
 import org.apache.guacamole.protocol.GuacamoleConfiguration;
 import org.openuds.guacamole.connection.ConnectionService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * AuthenticationProvider implementation which authenticates users that are
@@ -54,21 +50,15 @@ import org.slf4j.LoggerFactory;
 public class UDSAuthenticationProvider extends AbstractAuthenticationProvider {
 
     /**
-     * The name of the single connection that should be exposed to any user
-     * that authenticates via UDS.
-     */
-    private static final String CONNECTION_NAME = "UDS";
-
-    /**
      * The name of the query parameter that should contain the data sent to
      * the UDS service for authentication.
      */
     private static final String DATA_PARAMETER_NAME = "data";
 
     /**
-     * Logger for this class.
+     * Factory for creating UDSUserContext instances.
      */
-    private final Logger logger = LoggerFactory.getLogger(UDSAuthenticationProvider.class);
+    private final UDSUserContextFactory userContextFactory;
 
     /**
      * Service for retrieving connection configuration information from the
@@ -93,6 +83,7 @@ public class UDSAuthenticationProvider extends AbstractAuthenticationProvider {
 
         // Pull instance of connection service from injector
         connectionService = injector.getInstance(ConnectionService.class);
+        userContextFactory = injector.getInstance(UDSUserContextFactory.class);
 
     }
 
@@ -111,15 +102,13 @@ public class UDSAuthenticationProvider extends AbstractAuthenticationProvider {
         String data = request.getParameter(DATA_PARAMETER_NAME);
         if (data != null && !data.isEmpty()) {
 
-            logger.debug("Retrieving connection configuration using data from \"{}\"...", data);
-
             // Retrieve connection information using provided data
             GuacamoleConfiguration config = connectionService.getConnectionConfiguration(data);
             if (config != null) {
 
                 // Report successful authentication as a temporary, anonymous user,
                 // storing the retrieved connection configuration data for future use
-                return new UDSAuthenticatedUser(this, credentials, config);
+                return new UDSAuthenticatedUser(this, credentials, data);
 
             }
 
@@ -145,10 +134,7 @@ public class UDSAuthenticationProvider extends AbstractAuthenticationProvider {
 
         // Expose a single connection (derived from the "data" parameter
         // provided during authentication)
-        return new SimpleUserContext(this, Collections.singletonMap(
-            CONNECTION_NAME,
-            ((UDSAuthenticatedUser) authenticatedUser).getGuacamoleConfiguration()
-        ));
+        return userContextFactory.create(this, (UDSAuthenticatedUser) authenticatedUser);
 
     }
 
